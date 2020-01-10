@@ -11,7 +11,7 @@ You can also check out [wireguard-install](https://github.com/angristan/wireguar
 First, get the script and make it executable :
 
 ```bash
-curl -O https://raw.githubusercontent.com/angristan/openvpn-install/master/openvpn-install.sh
+curl -O https://raw.githubusercontent.com/geekism/openvpn-install/master/openvpn-install.sh
 chmod +x openvpn-install.sh
 ```
 
@@ -111,6 +111,7 @@ The script supports these OS and architectures:
 |  Arch Linux    |  ❔  |  ✅  |   ❔  |   ✅  |
 |   Centos 8     |  ❌  |  ✅  |   ❔  |   ❔  |
 |   CentOS 7     |  ❔  |  ✅  |   ❌  |   ✅  |
+|   CentOS 7     |  ❔  |  ✅  |   ❌  |   ✅  |
 |   Debian 8     |  ✅  |  ✅  |   ❌  |   ❌  |
 |   Debian 9     |  ❌  |  ✅  |   ✅  |   ✅  |
 |   Debian 10    |  ❔  |  ✅  |   ✅  |   ❔  |
@@ -128,13 +129,13 @@ To be noted:
 
 ## Fork
 
-This script is based on the great work of [Nyr and its contributors](https://github.com/Nyr/openvpn-install).
+This script is based on the great work of [angristan and its contributors](https://github.com/angristan/openvpn-install).
 
-Since 2016, the two scripts have diverged and are not alike anymore, especially under the hood. The main goal of the script was enhanced security. But since then, the script has been completely rewritten and a lot a features have been added. The script is only compatible with recent distributions though, so if you need to use a very old server or client, I advise using Nyr's script.
+Since 2016, the two scripts have diverged and are not alike anymore, especially under the hood. The main goal of the script was enhanced security. But since then, the script has been completely rewritten and a lot a features have been added. The script is only compatible with recent distributions though, so if you need to use a very old server or client, I advise using angristan's script.
 
 ## FAQ
 
-**LOOK AT THE [WIKI](https://github.com/angristan/openvpn-install/wiki/FAQ) FOR MORE INFORMATION. PLEASE READ BOTH BEFORE OPENING AN ISSUE.**
+**LOOK AT THE [WIKI](https://github.com/angristan/openvpn-install/wiki/) FOR MORE INFORMATION. PLEASE READ BOTH BEFORE OPENING AN ISSUE.**
 
 **PLEASE do net send me emails or private messages asking for help.** The only place to get help is the issues. Other people may be able to help and in the future, other users may also run into the same issue as you.
 
@@ -142,9 +143,7 @@ Since 2016, the two scripts have diverged and are not alike anymore, especially 
 
 **A:** I recommend these:
 
-- [Vultr](https://goo.gl/Xyd1Sc): Worldwide locations, IPv6 support, starting at $3.50/month
-- [PulseHeberg](https://goo.gl/76yqW5): France, unlimited bandwidth, starting at €3/month
-- [Digital Ocean](https://goo.gl/qXrNLK): Worldwide locations, IPv6 support, starting at $5/month
+- [BuyVM](bit.ly/307baaU):  Worldwide locations, IPv6 support, starting at $3.5/month
 
 ---
 
@@ -321,10 +320,9 @@ The script supports both and uses `tls-crypt` by default.
 
 ## Say thanks
 
-You can [say thanks](https://saythanks.io/to/Angristan) if you want!
+You can [say thanks](https://justla.me/donate.php) if you want!
 
 ## Credits & Licence
 
-Many thanks to the [contributors](https://github.com/Angristan/OpenVPN-install/graphs/contributors) and Nyr's original work.
+Many thanks to the [contributors](https://github.com/Angristan/OpenVPN-install/graphs/contributors) and angristan's original work.
 
-This project is under the [MIT Licence](https://raw.githubusercontent.com/Angristan/openvpn-install/master/LICENSE)
