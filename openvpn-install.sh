@@ -694,7 +694,11 @@ function installQuestions () {
 }
 
 function installOpenVPN () {
-		mkdir -p /etc/iptables
+	echo "Welcome to OpenVPN-install!"
+	echo "The git repository is available at: https://github.com/geekism/openvpn-install"
+	echo ""
+
+	mkdir -p /etc/iptables
 	if [[ $AUTO_INSTALL == "y" ]]; then
 		# Set default choices so that no questions will be asked.
 		APPROVE_INSTALL=${APPROVE_INSTALL:-y}
@@ -926,12 +930,11 @@ function installOpenVPN () {
 	if [[ "$OS" = 'arch' || "$OS" = 'fedora' || "$OS" = 'centos' ]]; then
 		if [[ $VERSION_ID -eq "6" ]]; then
 				echo "#!/bin/sh
-				iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o eth0 -j MASQUERADE
+				iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o ${NIC} -j MASQUERADE
 				iptables -A INPUT -i tun+ -j ACCEPT 
 				iptables -A FORWARD -i tun+ -j ACCEPT 
-				iptables -A FORWARD -i tun+ -o eth0 -m state --state RELATED,ESTABLISHED -j ACCEPT 
-				iptables -A FORWARD -i eth0 -o tun+ -m state --state RELATED,ESTABLISHED -j ACCEPT 
-				iptables -A OUTPUT -o tun+ -j ACCEPT
+				iptables -A FORWARD -i tun+ -o ${NIC} -m state --state RELATED,ESTABLISHED -j ACCEPT 
+				iptables -A FORWARD -i ${NIC} -o tun+ -m state --state RELATED,ESTABLISHED -j ACCEPT 
 				" > /etc/iptables/add-openvpn-rules.sh
 				chmod +x /etc/iptables/add-openvpn-rules.sh
 				service iptables save
@@ -955,7 +958,7 @@ function installOpenVPN () {
 				chmod +x /etc/iptables/add-openvpn-rules.sh
 				service iptables save && chkconfig iptables on && service iptables restart
 				chkconfig openvpn on && service openvpn restart
-		if
+		fi
 	elif [[ "$OS" == "ubuntu" ]] && [[ "$VERSION_ID" == "16.04" ]]; then
 		systemctl enable openvpn
 		systemctl start openvpn
@@ -1271,7 +1274,7 @@ function removeOpenVPN () {
 function manageMenu () {
 	clear
 	echo "Welcome to OpenVPN-install!"
-	echo "The git repository is available at: https://github.com/angristan/openvpn-install"
+	echo "The git repository is available at: https://github.com/geekism/openvpn-install"
 	echo ""
 	echo "It looks like OpenVPN is already installed."
 	echo ""
