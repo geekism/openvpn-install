@@ -1089,7 +1089,7 @@ fi
 }
 function setupWebUI() {
 	mkdir -p /var/www/html
-	cd /var/www/html
+	cd /var/www/html || /bin/false
 	git clone https://github.com/geekism/openvpn-monitor.git
 cat >/var/www/html/openvpn-monitor/openvpn-monitor.conf<<EOF
 [openvpn-monitor]
@@ -1120,35 +1120,23 @@ EOF
 		fi
 
 	elif [[ "$OS" = 'centos' ]]; then
-		if [[ -e "/usr/local/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" ]]; then
-			echo "LoadModule wsgi_module /usr/local/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" > /etc/httpd/conf.d/openvpn-monitor.conf
-		if
+		if [[ -e "/usr/local/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" ]]; then echo "LoadModule wsgi_module /usr/local/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" > /etc/httpd/conf.d/openvpn-monitor.conf; fi
 		if [[ -e "/usr/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" ]];then
-			echo "LoadModule wsgi_module /usr/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" > /etc/httpd/conf.d/openvpn-monitor.conf
-		fi
+			echo "LoadModule wsgi_module /usr/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" > /etc/httpd/conf.d/openvpn-monitor.conf; fi
 		echo "WSGIDaemonProcess openvpn-monitor user=apache group=apache threads=2" >> /etc/httpd/conf.d/openvpn-monitor.conf
 		echo "WSGIScriptAlias /openvpn-monitor /var/www/html/openvpn-monitor/openvpn-monitor.py" >> /etc/httpd/conf.d/openvpn-monitor.conf
 		service httpd restart
 		sed -i 's/env python36/env python/g' /var/www/html/openvpn-monitor/openvpn-monitor.py
-
 	elif [[ "$OS" = 'amzn' ]]; then
-		if [[ -e "/usr/local/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" ]]; then
-			echo "LoadModule wsgi_module /usr/local/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" > /etc/httpd/conf.d/openvpn-monitor.conf
-		if
-		if [[ -e "/usr/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" ]];then
-			echo "LoadModule wsgi_module /usr/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" > /etc/httpd/conf.d/openvpn-monitor.conf
-		fi		
+		if [[ -e "/usr/local/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" ]]; then echo "LoadModule wsgi_module /usr/local/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" > /etc/httpd/conf.d/openvpn-monitor.conf;fi
+		if [[ -e "/usr/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" ]];then echo "LoadModule wsgi_module /usr/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" > /etc/httpd/conf.d/openvpn-monitor.conf;fi
 		echo "WSGIDaemonProcess openvpn-monitor user=apache group=apache threads=2" >> /etc/httpd/conf.d/openvpn-monitor.conf
 		echo "WSGIScriptAlias /openvpn-monitor /var/www/html/openvpn-monitor/openvpn-monitor.py" >> /etc/httpd/conf.d/openvpn-monitor.conf
 		service httpd restart
 
 	elif [[ "$OS" = 'fedora' ]]; then
-		if [[ -e "/usr/local/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" ]]; then
-			echo "LoadModule wsgi_module /usr/local/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" > /etc/httpd/conf.d/openvpn-monitor.conf
-		if
-		if [[ -e "/usr/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" ]];then
-			echo "LoadModule wsgi_module /usr/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" > /etc/httpd/conf.d/openvpn-monitor.conf
-		fi		
+		if [[ -e "/usr/local/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" ]]; then echo "LoadModule wsgi_module /usr/local/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" > /etc/httpd/conf.d/openvpn-monitor.conf; fi
+		if [[ -e "/usr/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" ]];then echo "LoadModule wsgi_module /usr/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" > /etc/httpd/conf.d/openvpn-monitor.conf; fi
 		echo "WSGIDaemonProcess openvpn-monitor user=apache group=apache threads=2" >> /etc/httpd/conf.d/openvpn-monitor.conf
 		echo "WSGIScriptAlias /openvpn-monitor /var/www/html/openvpn-monitor/openvpn-monitor.py" >> /etc/httpd/conf.d/openvpn-monitor.conf
 		service httpd restart
