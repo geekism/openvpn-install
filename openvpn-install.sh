@@ -712,6 +712,7 @@ function installOpenVPN () {
 		CLIENT=${CLIENT:-black}
 		PASS=${PASS:-1}
 		CONTINUE=${CONTINUE:-y}
+		WEB=${WEB:-y}
 
 		PUBLIC_IPV4=$(curl ifconfig.co)
 		ENDPOINT=${ENDPOINT:-$PUBLIC_IPV4}
@@ -733,14 +734,37 @@ function installOpenVPN () {
 			apt-get update
 		fi
 		apt-get install -y openvpn iptables openssl wget ca-certificates curl
+		if [[ "$WEB" == "y" ]]; then
+			apt install -y git apache2 libapache2-mod-wsgi python-geoip2 python-ipaddr python-humanize python-bottle python-semantic-version geoip-database-extra geoipupdate
+		fi
 	elif [[ "$OS" = 'centos' ]]; then
-		yum install -y epel-release
-		yum install -y openvpn iptables openssl wget ca-certificates curl tar
+		yum install -y epel-release centos-release-scl ius-release
+		yum install -y openvpn iptables openssl wget ca-certificates curl tar 
+		if [[ "$WEB" == "y" ]]; then
+			yum install -y git httpd python2-geoip2 python-ipaddr python-humanize python-bottle python-semantic_version geolite2-city GeoIP-update
+			yum install -y python36u python36u-pip python36u-devel
+			pip3.6 install humanize
+			pip3.6 install semantic_version
+			pip3.6 install bottle
+			pip3.6 install mod_wsgi
+		fi
 	elif [[ "$OS" = 'amzn' ]]; then
 		amazon-linux-extras install -y epel
 		yum install -y openvpn iptables openssl wget ca-certificates curl
+		if [[ "$WEB" == "y" ]]; then
+			yum install -y git httpd python2-geoip2 python-ipaddr python-humanize python-bottle python-semantic_version geolite2-city GeoIP-update
+			yum install -y python36u python36u-pip
+			pip3.6 install humanize
+			pip3.6 install semantic_version
+			pip3.6 install bottle
+			pip3.6 install mod_wsgi
+		fi
+	
 	elif [[ "$OS" = 'fedora' ]]; then
 		dnf install -y openvpn iptables openssl wget ca-certificates curl
+		if [[ "$WEB" == "y" ]]; then
+			dnf install -y git httpd mod_wsgi python2-geoip2 python-ipaddr python-humanize python-bottle python-semantic_version geolite2-city GeoIP-update
+		fi
 	elif [[ "$OS" = 'arch' ]]; then
 		pacman --needed --noconfirm -Syu openvpn iptables openssl wget ca-certificates curl
 	fi
@@ -914,6 +938,9 @@ function installOpenVPN () {
 	tls-cipher $CC_CIPHER
 	status /var/log/openvpn/status.log
 	verb 3" >> /etc/openvpn/server.conf
+	if [[ "${WEB}" == "y" ]];then
+		echo "management 127.0.0.1 5555" >>/etc/openvpn/server.conf
+	fi
 	mkdir -p /var/log/openvpn
 	echo 'net.ipv4.ip_forward=1' >> /etc/sysctl.d/20-openvpn.conf
 	if [[ "$IPV6_SUPPORT" = 'y' ]]; then
@@ -1053,10 +1080,81 @@ function installOpenVPN () {
 if [[ $COMPRESSION_ENABLED == "y"  ]]; then
 	echo "compress $COMPRESSION_ALG" >> /etc/openvpn/client-template.txt
 fi
+
+if [[ "$WEB" == "y" ]]; then
+	setupWebUI	
+fi
 	newClient
 	echo "If you want to add more clients, you simply need to run this script another time!"
 }
+function setupWebUI() {
+	mkdir -p /var/www/html
+	cd /var/www/html
+	git clone https://github.com/geekism/openvpn-monitor.git
+cat >/var/www/html/openvpn-monitor/openvpn-monitor.conf<<EOF
+[openvpn-monitor]
+site=$OS - ${HOSTNAME}
+maps=False
+geoip_data=/usr/share/GeoIP/GeoIP.dat
+datetime_format=%d/%m/%Y %H:%M:%S
 
+[VPN1]
+host=localhost
+port=5555
+name=${OS}-${HOSTNAME}
+show_disconnect=False
+EOF
+
+	if [[ "$OS" =~ (debian|ubuntu) ]]; then
+
+		if [[ "$VERSION_ID" = "8" ]]; then
+			echo "WSGIScriptAlias /openvpn-monitor /var/www/html/openvpn-monitor/openvpn-monitor.py" > /etc/apache2/conf-available/openvpn-monitor.conf
+			a2enconf openvpn-monitor
+			systemctl restart apache2
+		fi
+
+		if [[ "$VERSION_ID" = "16.04" ]]; then
+			echo "WSGIScriptAlias /openvpn-monitor /var/www/html/openvpn-monitor/openvpn-monitor.py" > /etc/httpd/conf-available/openvpn-monitor.conf
+			a2enconf openvpn-monitor
+			systemctl restart apache2
+		fi
+
+	elif [[ "$OS" = 'centos' ]]; then
+		if [[ -e "/usr/local/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" ]]; then
+			echo "LoadModule wsgi_module /usr/local/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" > /etc/httpd/conf.d/openvpn-monitor.conf
+		if
+		if [[ -e "/usr/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" ]];then
+			echo "LoadModule wsgi_module /usr/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" > /etc/httpd/conf.d/openvpn-monitor.conf
+		fi
+		echo "WSGIDaemonProcess openvpn-monitor user=apache group=apache threads=2" >> /etc/httpd/conf.d/openvpn-monitor.conf
+		echo "WSGIScriptAlias /openvpn-monitor /var/www/html/openvpn-monitor/openvpn-monitor.py" >> /etc/httpd/conf.d/openvpn-monitor.conf
+		service httpd restart
+		sed -i 's/env python36/env python/g' /var/www/html/openvpn-monitor/openvpn-monitor.py
+
+	elif [[ "$OS" = 'amzn' ]]; then
+		if [[ -e "/usr/local/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" ]]; then
+			echo "LoadModule wsgi_module /usr/local/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" > /etc/httpd/conf.d/openvpn-monitor.conf
+		if
+		if [[ -e "/usr/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" ]];then
+			echo "LoadModule wsgi_module /usr/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" > /etc/httpd/conf.d/openvpn-monitor.conf
+		fi		
+		echo "WSGIDaemonProcess openvpn-monitor user=apache group=apache threads=2" >> /etc/httpd/conf.d/openvpn-monitor.conf
+		echo "WSGIScriptAlias /openvpn-monitor /var/www/html/openvpn-monitor/openvpn-monitor.py" >> /etc/httpd/conf.d/openvpn-monitor.conf
+		service httpd restart
+
+	elif [[ "$OS" = 'fedora' ]]; then
+		if [[ -e "/usr/local/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" ]]; then
+			echo "LoadModule wsgi_module /usr/local/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" > /etc/httpd/conf.d/openvpn-monitor.conf
+		if
+		if [[ -e "/usr/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" ]];then
+			echo "LoadModule wsgi_module /usr/lib64/python3.6/site-packages/mod_wsgi/server/mod_wsgi-py36.cpython-36m-x86_64-linux-gnu.so" > /etc/httpd/conf.d/openvpn-monitor.conf
+		fi		
+		echo "WSGIDaemonProcess openvpn-monitor user=apache group=apache threads=2" >> /etc/httpd/conf.d/openvpn-monitor.conf
+		echo "WSGIScriptAlias /openvpn-monitor /var/www/html/openvpn-monitor/openvpn-monitor.py" >> /etc/httpd/conf.d/openvpn-monitor.conf
+		service httpd restart
+	fi
+
+}
 function newClient () {
 	echo ""
 	echo "Tell me a name for the client."
