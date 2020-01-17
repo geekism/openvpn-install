@@ -1106,15 +1106,14 @@ show_disconnect=False
 EOF
 
 	if [[ "$OS" =~ (debian|ubuntu) ]]; then
-
-		if [[ "$VERSION_ID" = "8" ]]; then
+		if [[ "$VERSION_ID" =~ (8|9|10) ]]; then
 			echo "WSGIScriptAlias /openvpn-monitor /var/www/html/openvpn-monitor/openvpn-monitor.py" > /etc/apache2/conf-available/openvpn-monitor.conf
 			a2enconf openvpn-monitor
 			systemctl restart apache2
 		fi
 
 		if [[ "$VERSION_ID" = "16.04" ]]; then
-			echo "WSGIScriptAlias /openvpn-monitor /var/www/html/openvpn-monitor/openvpn-monitor.py" > /etc/httpd/conf-available/openvpn-monitor.conf
+			echo "WSGIScriptAlias /openvpn-monitor /var/www/html/openvpn-monitor/openvpn-monitor.py" > /etc/apache2/conf-available/openvpn-monitor.conf
 			a2enconf openvpn-monitor
 			systemctl restart apache2
 		fi
