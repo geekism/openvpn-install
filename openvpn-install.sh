@@ -684,6 +684,35 @@ function installQuestions () {
 				read -rp "Control channel additional security mechanism [1-2]: " -e -i 1 TLS_SIG
 		done
 	fi
+	echo "Setup a OpenVPN WebUI Statistics?"
+	echo "   1) Yes"
+	echo "   2) No"
+	until [[ $WEB =~ ^[1-2]$ ]]; do
+		read -rp "Setup OpenVPN WebUI Statistics? [1-2]: " -e -i 1 WEB
+	done
+	case $WEB in
+		1)
+			WEB="y"
+		;;
+		2)
+			WEB="n"
+		;;
+	esac
+	echo ""
+	echo "Setup a OpenVPN Graphing?"
+	echo "   1) Yes"
+	echo "   2) No"
+	until [[ $RRDGRAPH =~ ^[1-2]$ ]]; do
+		read -rp "Setup OpenVPN WebUI Statistics? [1-2]: " -e -i 1 RRDGRAPH
+	done
+	case $RRDGRAPH in
+		1)
+			GRAPHS="y"
+		;;
+		2)
+			GRAPHS="n"
+		;;
+	esac
 	echo ""
 	echo "Okay, that was all I needed. We are ready to setup your OpenVPN server now."
 	echo "You will be able to generate a client at the end of the installation."
@@ -713,6 +742,7 @@ function installOpenVPN () {
 		PASS=${PASS:-1}
 		CONTINUE=${CONTINUE:-y}
 		WEB=${WEB:-y}
+		GRAPHS=${GRAPHS:-y}
 
 		PUBLIC_IPV4=$(curl ifconfig.co)
 		ENDPOINT=${ENDPOINT:-$PUBLIC_IPV4}
@@ -735,7 +765,7 @@ function installOpenVPN () {
 		fi
 		apt-get install -y openvpn iptables openssl wget ca-certificates curl
 		if [[ "$WEB" == "y" ]]; then
-			apt install -y git apache2 libapache2-mod-wsgi python-geoip2 python-ipaddr python-humanize python-bottle python-semantic-version geoip-database-extra geoipupdate
+			apt install -y git apache2 libapache2-mod-wsgi libapache2-mod-wsgi-py3 python-geoip2 python-ipaddr python-humanize python-bottle python-semantic-version geoip-database-extra geoipupdate
 		fi
 	elif [[ "$OS" = 'centos' ]]; then
 		yum install -y epel-release centos-release-scl ius-release
@@ -956,12 +986,13 @@ function installOpenVPN () {
 	fi
 	if [[ "$OS" = 'arch' || "$OS" = 'fedora' || "$OS" = 'centos' ]]; then
 		if [[ $VERSION_ID -eq "6" ]]; then
+				uip=$(cut -d',' -f2 /etc/openvpn/ipp.txt)
 				echo "#!/bin/sh
 				iptables -t nat -A POSTROUTING -s 10.8.0.0/24 -o ${NIC} -j MASQUERADE
 				iptables -A INPUT -i tun+ -j ACCEPT 
 				iptables -A FORWARD -i tun+ -j ACCEPT 
 				iptables -A FORWARD -i tun+ -o ${NIC} -m state --state RELATED,ESTABLISHED -j ACCEPT 
-				iptables -A FORWARD -i ${NIC} -o tun+ -m state --state RELATED,ESTABLISHED -j ACCEPT 
+				iptables -A FORWARD -i ${NIC} -o tun+ -m state --state RELATED,ESTABLISHED -j ACCEPT
 				" > /etc/iptables/add-openvpn-rules.sh
 				chmod +x /etc/iptables/add-openvpn-rules.sh
 				service iptables save
@@ -1081,12 +1112,128 @@ if [[ $COMPRESSION_ENABLED == "y"  ]]; then
 	echo "compress $COMPRESSION_ALG" >> /etc/openvpn/client-template.txt
 fi
 
+if [[ "$GRAPHS" == "y" ]]; then
+	setupGraphs
+fi
+
 if [[ "$WEB" == "y" ]]; then
 	setupWebUI	
 fi
 	newClient
 	echo "If you want to add more clients, you simply need to run this script another time!"
 }
+
+function setupGraphs(){
+	if [[ "$OS" =~ (debian|ubuntu) ]]; then
+		if [[ "$VERSION_ID" =~ (8|9|10) ]]; then
+			apt install libapache2-mod-perl2 rrdtool
+			echo "
+Alias /openvpn-graphs /var/www/html/graphs/
+<Directory /var/www/html/graphs/>
+	DirectoryIndex index.php index.cgi
+	Options +ExecCGI -Indexes +FollowSymLinks 
+	AllowOverride All
+	Order allow,deny
+	Allow from all
+</Directory>
+			" > /etc/apache2/conf-available/openvpn-graphs.conf
+			a2enmod perl
+			a2enconf openvpn-graphs
+			systemctl restart apache2
+echo "
+iptables -N ${CLIENT}_IN
+iptables -N ${CLIENT}_OUT
+iptables -A ${CLIENT}_IN -j RETURN
+iptables -A ${CLIENT}_OUT -j RETURN
+iptables -I ${CLIENT}_IN -d ${VPN_IP}
+iptables -I ${CLIENT}_OUT -s ${VPN_IP}
+iptables -A FORWARD -j ${CLIENT}_IN
+iptables -A FORWARD -j ${CLIENT}_OUT
+" >> /etc/iptables/add-openvpn-rules.sh
+		fi
+
+		if [[ "$VERSION_ID" = "16.04" ]]; then
+			apt install libapache2-mod-perl2 rrdtool
+			echo "
+Alias /openvpn-graphs /var/www/html/graphs/
+<Directory /var/www/html/graphs/>
+	DirectoryIndex index.php index.cgi
+	Options +ExecCGI -Indexes +FollowSymLinks 
+	AllowOverride All
+	Order allow,deny
+	Allow from all
+</Directory>
+			" > /etc/apache2/conf-available/openvpn-graphs.conf
+			a2enconf openvpn-graphs
+			systemctl restart apache2
+echo "
+iptables -N ${CLIENT}_IN
+iptables -N ${CLIENT}_OUT
+iptables -A ${CLIENT}_IN -j RETURN
+iptables -A ${CLIENT}_OUT -j RETURN
+iptables -I ${CLIENT}_IN -d ${VPN_IP}
+iptables -I ${CLIENT}_OUT -s ${VPN_IP}
+iptables -A FORWARD -j ${CLIENT}_IN
+iptables -A FORWARD -j ${CLIENT}_OUT
+" >> /etc/iptables/add-openvpn-rules.sh
+		fi
+
+	elif [[ "$OS" = 'centos' ]]; then
+		yum install mod_perl rrdtool
+		echo "
+Alias /openvpn-graphs /var/www/html/graphs/
+<Directory /var/www/html/graphs/>
+	DirectoryIndex index.php index.cgi
+	Options +ExecCGI -Indexes +FollowSymLinks 
+	AllowOverride All
+	Order allow,deny
+	Allow from all
+</Directory>
+		" >> /etc/httpd/conf.d/openvpn-monitor.conf
+		service httpd restart
+echo "
+iptables -N ${CLIENT}_IN
+iptables -N ${CLIENT}_OUT
+iptables -A ${CLIENT}_IN -j RETURN
+iptables -A ${CLIENT}_OUT -j RETURN
+iptables -I ${CLIENT}_IN -d ${VPN_IP}
+iptables -I ${CLIENT}_OUT -s ${VPN_IP}
+iptables -A FORWARD -j ${CLIENT}_IN
+iptables -A FORWARD -j ${CLIENT}_OUT
+" >> /etc/iptables/add-openvpn-rules.sh
+	elif [[ "$OS" = 'amzn' ]]; then
+		yum install mod_perl rrdtool
+		echo "
+Alias /openvpn-graphs /var/www/html/graphs/
+<Directory /var/www/html/graphs/>
+	DirectoryIndex index.php index.cgi
+	Options +ExecCGI -Indexes +FollowSymLinks 
+	AllowOverride All
+	Order allow,deny
+	Allow from all
+</Directory>
+		" >> /etc/httpd/conf.d/openvpn-monitor.conf
+		service httpd restart
+echo "
+iptables -N ${CLIENT}_IN
+iptables -N ${CLIENT}_OUT
+iptables -A ${CLIENT}_IN -j RETURN
+iptables -A ${CLIENT}_OUT -j RETURN
+iptables -I ${CLIENT}_IN -d ${VPN_IP}
+iptables -I ${CLIENT}_OUT -s ${VPN_IP}
+iptables -A FORWARD -j ${CLIENT}_IN
+iptables -A FORWARD -j ${CLIENT}_OUT
+" >> /etc/iptables/add-openvpn-rules.sh
+	fi
+
+}
+
+
+function fetchGraphs) {
+mkdir /var/www/html/graphs/
+git clone https://github.com/geekism/openvpn-graphs.git /var/www/html/graphs/
+}
+
 function setupWebUI() {
 	mkdir -p /var/www/html
 	cd /var/www/html || /bin/false
@@ -1142,6 +1289,7 @@ EOF
 	fi
 
 }
+
 function newClient () {
 	echo ""
 	echo "Tell me a name for the client."
@@ -1212,7 +1360,24 @@ function newClient () {
 			;;
 		esac
 	} >> "$homeDir/$CLIENT.ovpn"
-
+	if [[ -e /var/www/html/graphs/index.cgi ]]; then
+		vpngraph="*/5 * * * * /var/www/html/graphs/vpn.pl ${CLIENT} >/dev/null 2>&1"
+		crontab -l > /tmp/cronfile
+		echo "${vpngraph}" >> /tmp/cronfile
+    	crontab /tmp/cronfile
+    	rm /tmp/cronfile
+		sed -i "s/eth0/vpn-${CLIENT}\",\"eth0/g" /var/www/html/graphs/index.cgi
+		echo "
+		iptables -N ${CLIENT}_IN
+		iptables -N ${CLIENT}_OUT
+		iptables -A ${CLIENT}_IN -j RETURN
+		iptables -A ${CLIENT}_OUT -j RETURN
+		iptables -I ${CLIENT}_IN -d ${VPN_IP}
+		iptables -I ${CLIENT}_OUT -s ${VPN_IP}
+		iptables -A FORWARD -j ${CLIENT}_IN
+		iptables -A FORWARD -j ${CLIENT}_OUT
+		" >> /etc/iptables/add-openvpn-rules.sh
+	fi
 	echo ""
 	echo "Client $CLIENT added, the configuration file is available at $homeDir/$CLIENT.ovpn."
 	echo "Download the .ovpn file and import it in your OpenVPN client."
