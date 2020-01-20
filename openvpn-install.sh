@@ -1362,7 +1362,9 @@ function newClient () {
 	} >> "$homeDir/$CLIENT.ovpn"
 	if [[ -e /var/www/html/graphs/index.cgi ]]; then
 		vpngraph="*/5 * * * * /var/www/html/graphs/vpn.pl ${CLIENT} >/dev/null 2>&1"
-		crontab -l > /tmp/cronfile
+		systemc="*/5 * * * * /var/www/html/graphs/system.pl >/dev/null 2>&1"
+		crontab -l |grep -v "system.pl" > /tmp/cronfile
+		echo "${sysemc}" >> /tmp/cronfile
 		echo "${vpngraph}" >> /tmp/cronfile
     	crontab /tmp/cronfile
     	rm /tmp/cronfile
