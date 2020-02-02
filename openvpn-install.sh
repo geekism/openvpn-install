@@ -1229,7 +1229,7 @@ iptables -A FORWARD -j ${CLIENT}_OUT
 }
 
 
-function fetchGraphs) {
+function fetchGraphs() {
 mkdir /var/www/html/graphs/
 git clone https://github.com/geekism/openvpn-graphs.git /var/www/html/graphs/
 }
